@@ -6,25 +6,26 @@ Legend: `M` = milestone, `S` = stretch goal, `A` = acceptance test.
 
 ---
 
-## Phase 0 — Foundations
+## Phase 0 — Foundations ✅ (complete)
 
 **Goal:** Empty repo → buildable, linted, tested skeleton with CI and a clear layout.
 
 **Deliverables**
-- [ ] `go.mod` — set the real module path (placeholder `shardstore` until the remote exists)
-- [ ] Layout: `cmd/shardstore`, `internal/{api,metadata,storage,ec,placement,repair,rpc,metrics,config,logging}`, `pkg`, `test`, `deploy`, `docs`
-- [ ] `cmd/shardstore`: `server` subcommand with env/flag config; `version` subcommand
-- [ ] Structured logging (slog), request-id plumbing skeleton
-- [ ] `Makefile`: `build`, `test`, `test-race`, `lint`, `bench`
-- [ ] `.golangci.yml`; GitHub Actions CI (lint + `go test -race ./...`)
-- [ ] Minimal in-memory health endpoint; README quickstart filled in
+- [x] `go.mod` — module `shardstore`; set the full remote path when the GitHub repo is published
+- [x] Layout: `cmd/shardstore`, `internal/{api,metadata,storage,ec,placement,repair,rpc,metrics,config,logging,version}`, `test`, `deploy`, `docs`
+- [x] `cmd/shardstore`: `server` subcommand with env/flag config (`SHARDSTORE_*` env, flags win); `version` subcommand with ldflags build info
+- [x] Structured logging (slog) with request-id plumbing; access log + `X-Request-Id` echo middleware
+- [x] `Makefile`: `build`, `test`, `test-race`, `lint`, `bench`, `clean`
+- [x] `.golangci.yml` (v2 config); GitHub Actions CI (lint + `go test -race ./...` + build on push/PR)
+- [x] Health endpoint `GET /healthz` (in-memory); graceful shutdown on SIGINT/SIGTERM
 
 **Acceptance**
-- [ ] `make lint` green on CI
-- [ ] `make test-race` green on CI
-- [ ] `make build` produces `bin/shardstore`; `shardstore version` prints semver + build info
+- [x] `make lint` green (golangci-lint v2.12, 0 issues)
+- [x] `make test-race` green (config, api, version suites)
+- [x] `make build` produces `bin/shardstore`; `shardstore version` prints semver + build info
+- [x] Live smoke test: health endpoint + request IDs verified via curl
 
-**Docs updated:** README §8, §9.
+**Docs updated:** README §8 (layout with phase labels), §9 (quickstart), status line.
 
 ---
 

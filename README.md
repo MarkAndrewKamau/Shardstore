@@ -6,7 +6,7 @@ Shardstore is a teaching-grade distributed object store that does the hard parts
 
 It is **not** a production MinIO/Ceph replacement. It is an engineering project with production-grade *thinking*: every design decision is documented, measured, and stress-tested. Treat this README as the internal design doc.
 
-> Status: **Phase 0 — foundations, not started.** Tracked in [docs/PHASES.md](docs/PHASES.md).
+> Status: **Phase 0 complete — foundations in place. Next: Phase 1 (storage engine + erasure coding).** Tracked in [docs/PHASES.md](docs/PHASES.md).
 
 ---
 
@@ -216,34 +216,46 @@ Benchmark methodology will be published alongside results (same hardware, pinned
 ## 8. Repo layout
 
 ```
-cmd/shardstore/       # main entrypoint (server, admin subcommands)
+cmd/shardstore/       # main entrypoint (server, version subcommands)
 internal/
-  api/                # S3 API gateway (HTTP, XML, SigV4)
-  metadata/           # Raft service, bbolt, object index
-  storage/            # shard engine (local fs + in-memory impls)
-  ec/                 # stripe encode/decode (reedsolomon wrapper)
-  placement/          # consistent hashing → CRUSH-like engine
-  repair/             # repair/scrub/rebalance loops
-  rpc/                # internal gRPC data path
-  metrics/            # Prometheus registry & durability events
-  config/  logging/   # plumbing
+  api/                # HTTP surface: health endpoint, middleware (Phase 2: S3)
+  metadata/           # Raft service, bbolt, object index (Phase 3)
+  storage/            # shard engine (local fs + in-memory impls) (Phase 1)
+  ec/                 # stripe encode/decode (reedsolomon wrapper) (Phase 1)
+  placement/          # consistent hashing → CRUSH-like engine (Phases 3-4)
+  repair/             # repair/scrub/rebalance loops (Phase 5)
+  rpc/                # internal gRPC data path (Phase 4)
+  metrics/            # Prometheus registry & durability events (Phase 7)
+  config/  logging/  version/   # plumbing (done)
 deploy/
-  compose/            # docker-compose profiles (3-node, 6-node, chaos)
-  helm/               # StatefulSet chart
-  grafana/            # dashboards
+  compose/            # docker-compose profiles (3-node, 6-node, chaos) (Phase 8)
+  helm/               # StatefulSet chart (Phase 8)
+  grafana/            # dashboards (Phase 7)
 docs/
   PHASES.md           # ← roadmap (start here)
-  benchmarks/  runbooks/  operations/
+  benchmarks/  runbooks/  operations/  lessons.md
 test/
   integration/  chaos/  bench/
 ```
 
+Phase labels in parentheses show when each tree lands; `plumbing` is complete.
+
 ## 9. Quickstart
 
-*Filled in as Phase 0 lands. Target UX:*
+**Phase 0 (current):** build and run a single node with health checks.
 
 ```bash
-make build
+make build                              # → bin/shardstore
+./bin/shardstore version                # shardstore v0.1.0 (commit …, built …)
+./bin/shardstore server -addr :9000 -data-dir ./data
+curl localhost:9000/healthz             # {"status":"ok","node":"…"}
+```
+
+Configuration is flags + `SHARDSTORE_*` env vars (flags win): `-node-id`, `-addr`, `-data-dir`, `-log-level`, `-log-json`. All requests carry and echo a `X-Request-Id` header.
+
+**Later phases** (target UX):
+
+```bash
 docker compose -f deploy/compose/6-node.yaml up -d
 aws --endpoint-url http://localhost:9000 s3 mb s3://demo
 ```
