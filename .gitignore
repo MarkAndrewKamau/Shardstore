@@ -1,0 +1,30 @@
+# Binaries
+/bin/
+/shardstore
+
+# Go
+*.test
+*.out
+coverage.*
+
+# Data dirs (runtime state)
+/data/
+*.db
+*.db-shm
+*.db-wal
+
+# Deploy secrets / local config
+.env
+*.pem
+*.key
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Kubernetes / helm local output
+deploy/helm/*.tgz
+
+# Benchmark scratch
+docs/benchmarks/raw/*.tmp
