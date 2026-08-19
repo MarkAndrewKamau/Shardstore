@@ -17,10 +17,10 @@ import (
 	"syscall"
 	"time"
 
-	"shardstore/internal/api"
-	"shardstore/internal/config"
-	"shardstore/internal/logging"
-	"shardstore/internal/version"
+	"github.com/MarkAndrewKamau/shardstore/internal/api"
+	"github.com/MarkAndrewKamau/shardstore/internal/config"
+	"github.com/MarkAndrewKamau/shardstore/internal/logging"
+	"github.com/MarkAndrewKamau/shardstore/internal/version"
 )
 
 func main() {

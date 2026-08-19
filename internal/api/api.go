@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"time"
 
-	"shardstore/internal/logging"
+	"github.com/MarkAndrewKamau/shardstore/internal/logging"
 )
 
 const requestIDHeader = "X-Request-Id"

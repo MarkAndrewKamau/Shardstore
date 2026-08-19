@@ -2,9 +2,9 @@ BIN      := bin/shardstore
 VERSION  := 0.1.0
 COMMIT   := $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 BUILDTIME := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-LDFLAGS  := -X shardstore/internal/version.Version=$(VERSION) \
-            -X shardstore/internal/version.Commit=$(COMMIT) \
-            -X shardstore/internal/version.BuildTime=$(BUILDTIME)
+LDFLAGS  := -X github.com/MarkAndrewKamau/shardstore/internal/version.Version=$(VERSION) \
+            -X github.com/MarkAndrewKamau/shardstore/internal/version.Commit=$(COMMIT) \
+            -X github.com/MarkAndrewKamau/shardstore/internal/version.BuildTime=$(BUILDTIME)
 
 .PHONY: build test test-race lint bench clean
 

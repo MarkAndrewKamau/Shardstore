@@ -6,7 +6,7 @@ Shardstore is a teaching-grade distributed object store that does the hard parts
 
 It is **not** a production MinIO/Ceph replacement. It is an engineering project with production-grade *thinking*: every design decision is documented, measured, and stress-tested. Treat this README as the internal design doc.
 
-> Status: **Phase 0 complete — foundations in place. Next: Phase 1 (storage engine + erasure coding).** Tracked in [docs/PHASES.md](docs/PHASES.md).
+> Status: **Phase 1 complete — EC core proven (4+2/6+3 fault matrices pass, ~3.5 GB/s encode/core). Next: Phase 2 (S3 API).** Tracked in [docs/PHASES.md](docs/PHASES.md).
 
 ---
 
@@ -94,7 +94,7 @@ Every node runs every role; the Raft leader additionally acts as metadata manage
 
 Replication is dead simple but wastes 2x the capacity for the same tolerance. EC 4+2 matches 3x replication's tolerance at half the raw capacity. The price: every write touches `k + m` nodes, reads need `k` of them, and *repair* requires reading `k` shards to rebuild one — so rebuild traffic is amplified by `k`/`m` relative to replication.
 
-EC is implemented with [klauspost/reedsolomon](https://github.com/klauspost/reedsolomon) (SIMD-accelerated). We encode/decode *per stripe* so that encoding is streaming: memory stays bounded regardless of object size.
+EC is implemented with [klauspost/reedsolomon](https://github.com/klauspost/reedsolomon) (SIMD-accelerated). We encode/decode *per stripe* so that encoding is streaming: memory stays bounded regardless of object size. Measured on an i7-8565U: **~3.5 GB/s encode, ~8.5 GB/s single-shard reconstruct per core** (methodology in [docs/benchmarks/ec.md](docs/benchmarks/ec.md)).
 
 **Tiny-object note:** we always write full stripes, so EC overhead ratio (1.5x) holds even for small objects — no shard-size floor penalty. (Ceph-style small-object replication is a possible future optimization; not in v1.)
 
@@ -198,12 +198,11 @@ Each scenario has a deterministic test in the chaos suite (Phase 6) asserting: a
 
 Numbers land in `docs/benchmarks/` as phases complete. Planned artifacts:
 
-- Latency: p50/p99 for Put/Get/List, small and large objects.
-- Throughput: MB/s and ops/s under `warp` mixed workloads.
-- Rebuild time vs object size and cluster size (e.g., 1 GiB object, 4+2, node loss → full rebuild).
-- Capacity efficiency: logical vs physical bytes stored (expect 1.5x at 4+2).
-- Resource usage: CPU, RSS, FD counts per node; encode/decode MB/s per core.
-- Durability events: counts per scenario from the chaos suite.
+- Latency: p50/p99 for Put/Get/List, small and large objects. *(Phase 2+)*
+- Throughput: MB/s and ops/s under `warp` mixed workloads. *(Phase 2+)*
+- Rebuild time vs object size and cluster size (e.g., 1 GiB object, 4+2, node loss → full rebuild). *(Phase 5)*
+- Capacity efficiency: logical vs physical bytes stored (expect 1.5x at 4+2). *(Phase 9)*
+- Resource usage: CPU, RSS, FD counts per node; encode/decode MB/s per core. *(Phase 1: EC core — [docs/benchmarks/ec.md](docs/benchmarks/ec.md))*
 
 Benchmark methodology will be published alongside results (same hardware, pinned versions, warm-up, repeats) — comparisons vs MinIO are only meaningful with the methodology.
 
@@ -252,6 +251,13 @@ curl localhost:9000/healthz             # {"status":"ok","node":"…"}
 ```
 
 Configuration is flags + `SHARDSTORE_*` env vars (flags win): `-node-id`, `-addr`, `-data-dir`, `-log-level`, `-log-json`. All requests carry and echo a `X-Request-Id` header.
+
+**Storage engine (Phase 1):** the EC core and object store are exercised via tests and benchmarks:
+
+```bash
+go test ./internal/ec/ ./internal/storage/   # fault matrices + bit-rot + on-disk format
+go test -bench=. -benchmem -run=XXX ./internal/ec/   # encode/reconstruct/verify MB/s
+```
 
 **Later phases** (target UX):
 

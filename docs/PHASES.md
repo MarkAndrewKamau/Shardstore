@@ -29,25 +29,25 @@ Legend: `M` = milestone, `S` = stretch goal, `A` = acceptance test.
 
 ---
 
-## Phase 1 — Storage engine + erasure coding core
+## Phase 1 — Storage engine + erasure coding core ✅ (complete)
 
 **Goal:** On a single node, store objects as EC'd stripes with checksums, and *prove* reconstruction.
 
 **Deliverables**
-- [ ] Stripe model: object → stripes (default 8 MiB) → `k+m` shards (4+2 default, 6+3 configurable)
-- [ ] Self-describing shard file format: magic, version, object ID, stripe index, shard index, SHA-256
-- [ ] `internal/ec`: streaming per-stripe encode/decode via `klauspost/reedsolomon`; bounded memory
-- [ ] `internal/storage`: `ShardStore` interface (`Put/Get/Delete/ListShard`) with local-fs and in-memory implementations (in-memory for fast tests)
-- [ ] Verify-on-read checksum; corruption is an explicit error type, not a silent read
-- [ ] Fault-matrix unit tests: for every subset of 4+2 shards, reconstruct from any 4; corruption detection tests
-- [ ] Encode/decode throughput micro-benchmarks (`make bench`)
+- [x] Stripe model: object → stripes (default 8 MiB) → `k+m` shards (4+2 default, 6+3 configurable)
+- [x] Self-describing shard file format: magic, version, object ID, stripe index, shard index, SHA-256 (in `internal/storage/header.go`)
+- [x] `internal/ec`: streaming per-stripe encode/decode via `klauspost/reedsolomon` v1.14.2; bounded memory (one stripe in flight)
+- [x] `internal/storage`: `ShardStore` interface (`Put/Get/Verify/Delete/List` + markers) with `FileStore` (fsync'd writes, hashed dir names) and `MemStore` (tests/chaos)
+- [x] `ObjectStore`: streaming PutObject/GetObject/DeleteObject with verify-on-read; corrupted shards treated as lost and reconstructed from survivors
+- [x] Fault-matrix tests: every subset of 4+2 and 6+3 shards; object-level shard-loss matrix; bit-rot detection; unrecoverable-object errors; on-disk format roundtrip
+- [x] Encode/decode throughput micro-benchmarks → `docs/benchmarks/ec.md`
 
 **Acceptance**
-- [ ] All `2^k` fault-matrix subsets pass: any 2 lost shards → full reconstruction
-- [ ] Corrupted shard byte → detected, not returned
-- [ ] Benchmark results recorded in `docs/benchmarks/ec.md` (MB/s per core, memory bounds)
+- [x] All fault-matrix subsets pass: any 2 (4+2) or 3 (6+3) lost shards → full reconstruction
+- [x] Corrupted shard byte → `ErrCorruptShard`, never returned as data
+- [x] Benchmark results recorded in `docs/benchmarks/ec.md`: encode ~3.5 GB/s, single-shard reconstruct ~8.5 GB/s per core
 
-**Docs updated:** README §4.1–4.2, §5 (bit-rot row), §6; **Lessons learned: first entries** (`docs/lessons.md`).
+**Docs updated:** README §4.1–4.2 (links to measured numbers), §5 (bit-rot row), §6; `docs/lessons.md` (5 entries); `docs/benchmarks/ec.md` (methodology + results).
 
 ---
 
