@@ -20,6 +20,7 @@ import (
 	"github.com/MarkAndrewKamau/shardstore/internal/api"
 	"github.com/MarkAndrewKamau/shardstore/internal/config"
 	"github.com/MarkAndrewKamau/shardstore/internal/logging"
+	"github.com/MarkAndrewKamau/shardstore/internal/storage"
 	"github.com/MarkAndrewKamau/shardstore/internal/version"
 )
 
@@ -72,18 +73,32 @@ func runServer(args []string) error {
 		"addr", cfg.ListenAddr,
 		"data_dir", cfg.DataDir,
 		"version", version.String(),
+		"ec_data_shards", cfg.ECDataShards,
+		"ec_parity_shards", cfg.ECParityShards,
+		"stripe_size", cfg.StripeSize,
 	)
 
 	if err := os.MkdirAll(cfg.DataDir, 0o755); err != nil {
 		return fmt.Errorf("create data dir: %w", err)
 	}
 
+	shardStore, err := storage.NewFileStore(cfg.DataDir)
+	if err != nil {
+		return fmt.Errorf("create shard store: %w", err)
+	}
+
+	ecParams := storage.ECParams{
+		DataShards:   cfg.ECDataShards,
+		ParityShards: cfg.ECParityShards,
+	}
+	objectStore := storage.NewObjectStore(shardStore, ecParams, cfg.StripeSize)
+
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           api.New(cfg.NodeID, logger).Handler(),
+		Handler:           api.New(cfg.NodeID, logger, objectStore, cfg.PermissiveAuth).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
