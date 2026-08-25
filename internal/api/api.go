@@ -510,30 +510,14 @@ func (s *Server) handleGetObject(w http.ResponseWriter, r *http.Request) {
 		s.writeXMLError(w, http.StatusInternalServerError, ErrCodeInternalError, "Failed to get object", r.URL.Path, r)
 		return
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 	
 	// Handle Range header
 	rangeHeader := r.Header.Get("Range")
 	if rangeHeader != "" {
-		// Parse range header (simple implementation)
-		// Format: bytes=start-end
-		if strings.HasPrefix(rangeHeader, "bytes=") {
-			rangeSpec := strings.TrimPrefix(rangeHeader, "bytes=")
-			parts := strings.Split(rangeSpec, "-")
-			if len(parts) == 2 {
-				start, _ := strconv.ParseInt(parts[0], 10, 64)
-				end, _ := strconv.ParseInt(parts[1], 10, 64)
-				if end == 0 {
-					end = size - 1
-				}
-				if start >= 0 && end < size && start <= end {
-					// Seek to start
-					// For now, we'll just return the full object
-					// A full implementation would use io.SectionReader
-				}
-			}
-		}
-		w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", 0, size-1, size))
+		// Range requests not fully supported for streaming EC reads yet
+		// Return full object with 206 Partial Content for compatibility
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes 0-%d/%d", size-1, size))
 		w.WriteHeader(http.StatusPartialContent)
 	} else {
 		w.WriteHeader(http.StatusOK)
@@ -738,34 +722,34 @@ func (s *Server) handleMultipartOperations(w http.ResponseWriter, r *http.Reques
 			// Read all parts in order and concatenate
 			var fullData strings.Builder
 			for _, part := range completeReq.Parts {
-				partMarkerID := fmt.Sprintf("__multipart__/%s/%s/part/%d", objectID, uploadID, part.PartNumber)
-				reader, _, err := s.objectStore.GetObject(ctx, partMarkerID)
-				if err != nil {
-					s.writeXMLError(w, http.StatusInternalServerError, ErrCodeInternalError, "Failed to read part", r.URL.Path, r)
-					return
-				}
-				data, _ := io.ReadAll(reader)
-				fullData.Write(data)
-				reader.Close()
-			}
-			
-			// Store the complete object
-			combinedData := fullData.String()
-			err = s.objectStore.PutObject(ctx, objectID, strings.NewReader(combinedData), int64(len(combinedData)))
+partMarkerID := fmt.Sprintf("__multipart__/%s/%s/part/%d", objectID, uploadID, part.PartNumber)
+			reader, _, err := s.objectStore.GetObject(ctx, partMarkerID)
 			if err != nil {
-				s.writeXMLError(w, http.StatusInternalServerError, ErrCodeInternalError, "Failed to complete multipart upload", r.URL.Path, r)
+				s.writeXMLError(w, http.StatusInternalServerError, ErrCodeInternalError, "Failed to read part", r.URL.Path, r)
 				return
 			}
-			
-			// Clean up part markers
-			for _, part := range completeReq.Parts {
-				partMarkerID := fmt.Sprintf("__multipart__/%s/%s/part/%d", objectID, uploadID, part.PartNumber)
-				s.objectStore.DeleteObject(ctx, partMarkerID)
-			}
-			
-			// Delete upload marker
-			uploadMarkerID := fmt.Sprintf("__multipart__/%s/%s", objectID, uploadID)
-			s.objectStore.DeleteObject(ctx, uploadMarkerID)
+			data, _ := io.ReadAll(reader)
+			fullData.Write(data)
+			_ = reader.Close()
+		}
+		
+		// Store the complete object
+		combinedData := fullData.String()
+		err = s.objectStore.PutObject(ctx, objectID, strings.NewReader(combinedData), int64(len(combinedData)))
+		if err != nil {
+			s.writeXMLError(w, http.StatusInternalServerError, ErrCodeInternalError, "Failed to complete multipart upload", r.URL.Path, r)
+			return
+		}
+		
+		// Clean up part markers
+		for _, part := range completeReq.Parts {
+			partMarkerID := fmt.Sprintf("__multipart__/%s/%s/part/%d", objectID, uploadID, part.PartNumber)
+			_ = s.objectStore.DeleteObject(ctx, partMarkerID)
+		}
+		
+		// Delete upload marker
+		uploadMarkerID := fmt.Sprintf("__multipart__/%s/%s", objectID, uploadID)
+		_ = s.objectStore.DeleteObject(ctx, uploadMarkerID)
 			
 			result := CompleteMultipartUploadResult{
 				Location: fmt.Sprintf("/%s/%s", bucket, object),
@@ -783,7 +767,7 @@ func (s *Server) handleMultipartOperations(w http.ResponseWriter, r *http.Reques
 			
 			// List and delete all parts
 			// For simplicity, we'll just delete the upload marker
-			s.objectStore.DeleteObject(ctx, uploadMarkerID)
+			_ = s.objectStore.DeleteObject(ctx, uploadMarkerID)
 			
 			w.WriteHeader(http.StatusNoContent)
 			return
