@@ -22,12 +22,12 @@ const DefaultStripeSize = 8 << 20
 // service in Phase 3.
 type ObjectStore struct {
 	store      ShardStore
-	params     ec.Params
+	params     ECParams
 	stripeSize int64
 }
 
 // NewObjectStore builds an ObjectStore over store.
-func NewObjectStore(store ShardStore, params ec.Params, stripeSize int64) *ObjectStore {
+func NewObjectStore(store ShardStore, params ECParams, stripeSize int64) *ObjectStore {
 	if stripeSize <= 0 {
 		stripeSize = DefaultStripeSize
 	}
@@ -35,7 +35,7 @@ func NewObjectStore(store ShardStore, params ec.Params, stripeSize int64) *Objec
 }
 
 // Params returns the EC scheme in use.
-func (o *ObjectStore) Params() ec.Params { return o.params }
+func (o *ObjectStore) Params() ECParams { return o.params }
 
 // PutObject reads size bytes from r, encodes them stripe by stripe, and
 // persists all shards. A zero-size object stores only its marker.
@@ -46,7 +46,8 @@ func (o *ObjectStore) PutObject(ctx context.Context, objectID string, r io.Reade
 	if size < 0 {
 		return fmt.Errorf("storage: negative size %d", size)
 	}
-	enc, err := ec.EncoderFor(o.params)
+	ecParams := o.params.toECParams()
+	enc, err := ec.EncoderFor(ecParams)
 	if err != nil {
 		return err
 	}
@@ -72,7 +73,7 @@ func (o *ObjectStore) PutObject(ctx context.Context, objectID string, r io.Reade
 	return o.store.WriteMarker(ctx, objectID, ObjectMeta{
 		Size:    size,
 		Stripes: stripeIdx,
-		Params:  o.params,
+		Params:  ecParams,
 	})
 }
 
@@ -146,7 +147,8 @@ func (o *ObjectStore) GetObject(ctx context.Context, objectID string) (io.ReadCl
 }
 
 func (o *ObjectStore) encoder() *ec.Encoder {
-	enc, err := ec.EncoderFor(o.params)
+	ecParams := o.params.toECParams()
+	enc, err := ec.EncoderFor(ecParams)
 	if err != nil {
 		panic(err) // params are validated at construction
 	}
@@ -205,7 +207,7 @@ type objectReader struct {
 	store        ShardStore
 	enc          *ec.Encoder
 	objectID     string
-	params       ec.Params
+	params       ECParams
 	stripeSize   int64
 	totalStripes uint32
 

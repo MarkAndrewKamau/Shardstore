@@ -11,7 +11,24 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/MarkAndrewKamau/shardstore/internal/ec"
 )
+
+// ECParams mirrors internal/ec.Params but lives in the storage package
+// so the API layer can configure the object store without importing ec.
+type ECParams struct {
+	DataShards   int
+	ParityShards int
+}
+
+func (p ECParams) ShardCount() int { return p.DataShards + p.ParityShards }
+
+func (p ECParams) MaxLoss() int { return p.ParityShards }
+
+func (p ECParams) toECParams() ec.Params {
+	return ec.Params{DataShards: p.DataShards, ParityShards: p.ParityShards}
+}
 
 // ShardStore persists and retrieves individual shards. Implementations must
 // return ErrCorruptShard when a shard's payload fails its checksum, so
@@ -273,7 +290,7 @@ func (f *FileStore) ListObjectShards(ctx context.Context, objectID string) ([]Sh
 	}
 	var keys []ShardKey
 	for _, k := range all {
-		if k.ObjectID == objectID {
+		if objectID == "" || k.ObjectID == objectID {
 			keys = append(keys, k)
 		}
 	}
@@ -401,7 +418,7 @@ func (m *MemStore) ListObjectShards(ctx context.Context, objectID string) ([]Sha
 	}
 	var keys []ShardKey
 	for _, k := range all {
-		if k.ObjectID == objectID {
+		if objectID == "" || k.ObjectID == objectID {
 			keys = append(keys, k)
 		}
 	}

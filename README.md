@@ -6,7 +6,7 @@ Shardstore is a teaching-grade distributed object store that does the hard parts
 
 It is **not** a production MinIO/Ceph replacement. It is an engineering project with production-grade *thinking*: every design decision is documented, measured, and stress-tested. Treat this README as the internal design doc.
 
-> Status: **Phase 1 complete — EC core proven (4+2/6+3 fault matrices pass, ~3.5 GB/s encode/core). Next: Phase 2 (S3 API).** Tracked in [docs/PHASES.md](docs/PHASES.md).
+> Status: **Phase 2 complete — S3 API implemented (buckets, objects, multipart upload, SigV4 permissive mode). Next: Phase 3 (Metadata service).** Tracked in [docs/PHASES.md](docs/PHASES.md).
 
 ---
 

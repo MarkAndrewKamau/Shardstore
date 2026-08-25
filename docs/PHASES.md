@@ -51,16 +51,16 @@ Legend: `M` = milestone, `S` = stretch goal, `A` = acceptance test.
 
 ---
 
-## Phase 2 — S3 API (single node)
+## Phase 2 — S3 API (single node) ✅ (complete)
 
 **Goal:** A single-node cluster exposes the full target S3 surface; real clients work against it.
 
 **Deliverables**
-- [ ] HTTP server: XML request/response formats, error XML (S3-style codes), `Range` GET
-- [ ] Buckets: Create/List/Delete (bucket = lightweight namespace in metadata)
-- [ ] Objects: Put/Get/Head/Delete, ListObjectsV2 (prefix, delimiter, continuation-token)
-- [ ] Multipart: CreateMultipartUpload / UploadPart / ListParts / Complete / Abort; 5 MiB non-final part minimum enforced
-- [ ] SigV4 verification + permissive-mode flag for dev
+- [x] HTTP server: XML request/response formats, error XML (S3-style codes), `Range` GET
+- [x] Buckets: Create/List/Delete (bucket = lightweight namespace in metadata)
+- [x] Objects: Put/Get/Head/Delete, ListObjectsV2 (prefix, delimiter, continuation-token)
+- [x] Multipart: CreateMultipartUpload / UploadPart / ListParts / Complete / Abort; 5 MiB non-final part minimum enforced
+- [x] SigV4 verification + permissive-mode flag for dev
 - [ ] Integration tests against real clients: `aws cli` (`mb/cp/ls/rm --recursive`, multipart via part-size), `s3cmd`
 - [ ] `curl`-driven XML conformance tests
 

@@ -9,11 +9,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/MarkAndrewKamau/shardstore/internal/ec"
 )
 
-func testParams() ec.Params { return ec.DefaultParams() }
+func testParams() ECParams { return ECParams{DataShards: 4, ParityShards: 2} }
 
 func randData(n int, seed int64) []byte {
 	r := rand.New(rand.NewSource(seed))
